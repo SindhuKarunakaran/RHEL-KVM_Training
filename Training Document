@@ -1,0 +1,40 @@
+Use RH358 lab
+Configuring Network Bonding
+1. On servera, create an active-backup bond interface named bond0 and assign it the 192.168.0.100/24 address. Assign the eth1 and eth2 network interfaces as port interfaces.
+# nmcli con add con-name bond0 type bond ifname bond0 mode active-backup
+# nmcli con mod bond0 ipv4.addresses 192.168.0.100/24 ipv4.method manual
+# nmcli con add con-name bond0-port1 type ethernet port-type bond ifname eth1 controller bond0
+# nmcli con add con-name bond0-port2 type ethernet port-type bond ifname eth2 controller bond0
+# nmcli con up bond0
+# nmcli con up bond0-port1
+# nmcli con up bond0-port2
+
+2. Display the state of the bond interface (Note down the currently active interface)
+# cat /proc/net/bonding/bond0
+
+3. To confirm the IP connectivity, use the first terminal to ping an address on the 192.168.0.0/24 network through the bond0 connection. Leave the ping command running on the terminal:
+# ping -I bond0 192.168.0.254
+
+4. In the second terminal, bring down the previously identified active port interface:
+# nmcli device down eth1
+# cat /proc/net/bonding/bond0 (Notice that the previous backup port interface is now the active port interface and in the first terminal ping continues without interruption)
+
+Configuring Network Teaming
+1. On servera, create an active-backup team interface named team0 and assign it the 192.168.0.100/24 address. Assign the eth1 and eth2 network interfaces as port interfaces.
+# nmcli con add con-name team0 type team ifname team0 config ‘{“runner”:{“name”:”activebackup”}}’
+# nmcli con modify team0 ipv4.addresses ‘192.168.0.100/24’ ipv4.method manual
+# nmcli connection add con-name team0-slave1 type team-slave ifname eth1 master team0
+# nmcli connection add con-name team0-slave2 type team-slave ifname eth2 master team0
+# nmcli connection up team0
+# nmcli connection up team0-slave1
+# nmcli connection up team0-slave2
+
+2. Display the state of the bond interface (Note down the currently active interface)
+# teamdctl team0 state
+
+3. To confirm the IP connectivity, use the first terminal to ping an address on the 192.168.0.0/24 network through the bond0 connection. Leave the ping command running on the terminal:
+# ping -I team0 192.168.0.254
+
+4. In the second terminal, bring down the previously identified active port interface:
+# nmcli device down eth1
+# teamdctl team0 state (Notice that the previous backup port interface is now the active port interface and in the first terminal ping continues without interruption)
